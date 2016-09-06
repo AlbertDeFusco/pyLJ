@@ -2,13 +2,16 @@ import sys
 import numpy as np
 import dask.array as da
 import os
+import warnings
+
+warnings.filterwarnings('ignore')
 
 NCPUS = os.cpu_count()
 
 def make_cluster(natoms, radius=20, seed=1981):
     np.random.seed(seed)
-    arr = (np.random.normal(0, radius, size=(natoms,3))-0.5)
-    return da.from_array(arr, chunks=arr.shape[0]//NCPUS)
+    arr = np.random.normal(0, radius, size=(natoms,3))-0.5
+    return da.from_array(arr, chunks=natoms//NCPUS)
 
 
 def potential(r2, epsilon=1., sigma=1.):
@@ -34,6 +37,7 @@ def lj(cluster, do_forces=True, *parameters):
     r2 = (diff**2).sum(-1)
 
     energy = da.nansum(potential(r2,*parameters))/2.
+
     if do_forces:
         forces = da.nansum(gradient(r2, *parameters)[:,:,np.newaxis]*diff,axis=0)
         return energy, forces
@@ -44,7 +48,7 @@ def lj(cluster, do_forces=True, *parameters):
 def main(natoms=100):
     print('A {:d} atom cluster'.format(natoms))
     atoms = make_cluster(natoms)
-    energy = lj(atoms,do_forces=False).compute()
+    energy = lj(atoms, do_forces=False).compute()
     print('  Total energy: {:.4f}'.format(energy))
 
 if __name__ == '__main__':
