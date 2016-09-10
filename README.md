@@ -1,1 +1,1 @@
-conda install dask numpy
+conda install dask numpy numba
